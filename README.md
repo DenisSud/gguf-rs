@@ -13,7 +13,7 @@ Use this only for learning/testing purposes - not recommended for production use
 1. Add to your `Cargo.toml`:
 ```toml
 [dependencies]
-gguf-rs = { git = "https://github.com/yourusername/gguf-rs" }
+gguf-rs = { git = "https://github.com/denissud/gguf-rs" }
 ```
 
 2. Load a GGUF file:
