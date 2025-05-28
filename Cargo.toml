@@ -1,0 +1,11 @@
+[package]
+name = "ggml-qwen3"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance Rust crate for parsing GGUF files containing Qwen3 family models"
+license = "MIT"
+
+[dependencies]
+memmap2 = "0.5.10"
+byteorder = "1.4.3"
+thiserror = "1.0.40"
