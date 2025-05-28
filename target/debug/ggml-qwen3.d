@@ -1,1 +1,1 @@
-/home/ubuntu/ggml-qwen3/target/debug/ggml-qwen3: /home/ubuntu/ggml-qwen3/src/lib.rs /home/ubuntu/ggml-qwen3/src/main.rs
+/home/denis/Projects/qwen-inference/rust-implementation/gguf-pure-rust/target/debug/ggml-qwen3: /home/denis/Projects/qwen-inference/rust-implementation/gguf-pure-rust/src/lib.rs /home/denis/Projects/qwen-inference/rust-implementation/gguf-pure-rust/src/main.rs

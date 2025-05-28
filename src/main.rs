@@ -1,7 +1,7 @@
 use std::env;
-use std::path::Path;
+use std::path::Path; // This import is unused, will keep the warning for now
 
-use ggml_qwen3::{GgmlFile, Qwen3Model};
+use ggml_qwen3::{GgmlFile, Qwen3Model}; // Removed GgmlTensor
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get model path from command line arguments
@@ -14,20 +14,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     println!("Loading model from: {}", model_path);
-    
+
     // Open the GGUF file
     let ggml = GgmlFile::open(model_path)?;
-    
+
     // Print tensor count
     let tensors: Vec<_> = ggml.tensors().collect();
     println!("Model contains {} tensors", tensors.len());
-    
-    // Print first few tensors
-    println!("\nFirst 5 tensors:");
-    for (i, tensor) in tensors.iter().take(5).enumerate() {
-        println!("  {}: {} {:?} {:?}", i, tensor.name, tensor.shape, tensor.dtype);
-    }
-    
+
     // Try to parse as Qwen3 model
     println!("\nAttempting to parse as Qwen3 model...");
     match Qwen3Model::from_ggml(&ggml) {
@@ -39,35 +33,74 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Attention heads: {}", model.config.num_attention_heads);
             println!("  Hidden layers: {}", model.config.num_hidden_layers);
             println!("  Vocabulary size: {}", model.config.vocab_size);
-            
+
             println!("\nModel structure:");
-            println!("  Embedding tensor: {} {:?}", model.embed_tokens.name, model.embed_tokens.shape);
-            println!("  Number of layers: {}", model.layers.len());
-            
-            // Print details of first layer
-            if !model.layers.is_empty() {
-                let layer = &model.layers[0];
-                println!("\nFirst layer details:");
-                println!("  Input layernorm: {} {:?}", layer.input_layernorm.name, layer.input_layernorm.shape);
-                println!("  Q projection: {} {:?}", layer.attn.q_proj.name, layer.attn.q_proj.shape);
-                println!("  K projection: {} {:?}", layer.attn.k_proj.name, layer.attn.k_proj.shape);
-                println!("  V projection: {} {:?}", layer.attn.v_proj.name, layer.attn.v_proj.shape);
-                println!("  O projection: {} {:?}", layer.attn.o_proj.name, layer.attn.o_proj.shape);
-                println!("  Gate projection: {} {:?}", layer.mlp.gate_proj.name, layer.mlp.gate_proj.shape);
-                println!("  Up projection: {} {:?}", layer.mlp.up_proj.name, layer.mlp.up_proj.shape);
-                println!("  Down projection: {} {:?}", layer.mlp.down_proj.name, layer.mlp.down_proj.shape);
+
+            // Print Embedding layer details
+            println!("  Embedding tensor:");
+            // Assuming model.embed_tokens directly holds struct with name, shape, and dtype
+            println!("    Name: {}", model.embed_tokens.name);
+            println!("    Shape: {:?}", model.embed_tokens.shape);
+            println!("    Dtype: {:?}", model.embed_tokens.dtype);
+
+
+            println!("\n  Transformer Layers:");
+            // Print details for each transformer layer
+            for (i, layer) in model.layers.iter().enumerate() {
+                println!("  Layer {}:", i);
+                // Assuming layer.input_layernorm holds struct with name, shape, and dtype
+                println!("    Input layernorm:");
+                println!("      Name: {}", layer.input_layernorm.name);
+                println!("      Shape: {:?}", layer.input_layernorm.shape);
+                println!("      Dtype: {:?}", layer.input_layernorm.dtype);
+
+                println!("    Attention:");
+                // Assuming layer.attn.q_proj etc. hold structs with name, shape, and dtype
+                println!("      Q projection:");
+                println!("        Name: {}", layer.attn.q_proj.name);
+                println!("        Shape: {:?}", layer.attn.q_proj.shape);
+                println!("        Dtype: {:?}", layer.attn.q_proj.dtype);
+
+                println!("      K projection:");
+                println!("        Name: {}", layer.attn.k_proj.name);
+                println!("        Shape: {:?}", layer.attn.k_proj.shape);
+                println!("        Dtype: {:?}", layer.attn.k_proj.dtype);
+
+                println!("      V projection:");
+                println!("        Name: {}", layer.attn.v_proj.name);
+                println!("        Shape: {:?}", layer.attn.v_proj.shape);
+                println!("        Dtype: {:?}", layer.attn.v_proj.dtype);
+
+                println!("      O projection:");
+                println!("        Name: {}", layer.attn.o_proj.name);
+                println!("        Shape: {:?}", layer.attn.o_proj.shape);
+                println!("        Dtype: {:?}", layer.attn.o_proj.dtype);
+
+
+                println!("    MLP:");
+                // Assuming layer.mlp.gate_proj etc. hold structs with name, shape, and dtype
+                println!("      Gate projection:");
+                println!("        Name: {}", layer.mlp.gate_proj.name);
+                println!("        Shape: {:?}", layer.mlp.gate_proj.shape);
+                println!("        Dtype: {:?}", layer.mlp.gate_proj.dtype);
+
+                println!("      Up projection:");
+                println!("        Name: {}", layer.mlp.up_proj.name);
+                println!("        Shape: {:?}", layer.mlp.up_proj.shape);
+                println!("        Dtype: {:?}", layer.mlp.up_proj.dtype);
+
+                println!("      Down projection:");
+                println!("        Name: {}", layer.mlp.down_proj.name);
+                println!("        Shape: {:?}", layer.mlp.down_proj.shape);
+                println!("        Dtype: {:?}", layer.mlp.down_proj.dtype);
+
             }
-            
-            // Demonstrate tensor data access (zero-copy)
-            if let Some(tensor) = ggml.get_tensor("model.embed_tokens.weight") {
-                let data = ggml.tensor_data(tensor);
-                println!("\nEmbed tokens data (first 16 bytes): {:?}", &data[..16.min(data.len())]);
-            }
+
         },
         Err(err) => {
             println!("Failed to parse as Qwen3 model: {:?}", err);
         }
     }
-    
+
     Ok(())
 }
