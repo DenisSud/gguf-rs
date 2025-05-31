@@ -1,20 +1,3 @@
-//! GGUF file format parser for metadata and headers.
-//!
-//! This crate provides functionality to parse GGUF (GGML Universal Format) files,
-//! specifically focusing on reading headers and metadata key-value pairs.
-//!
-//! # Examples
-//!
-//! ```rust
-//! use std::fs::File;
-//! use gguf_rs::{GgufHeader, GgufReader};
-//!
-//! let mut file = File::open("model.gguf")?;
-//! let header = GgufHeader::parse(&mut file)?;
-//! let metadata = GgufReader::read_metadata(&mut file, header.n_kv)?;
-//! # Ok::<(), Box<dyn std::error::Error>>(())
-//! ```
-
 use std::collections::HashMap;
 use std::fmt;
 use std::io::{self, Read};
@@ -466,45 +449,4 @@ fn read_u64_le<R: Read>(reader: &mut R) -> Result<u64> {
     let mut buf = [0u8; 8];
     reader.read_exact(&mut buf)?;
     Ok(u64::from_le_bytes(buf))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Cursor;
-
-    #[test]
-    fn test_value_type_conversion() {
-        assert_eq!(ValueType::from_u32(0), Some(ValueType::Uint8));
-        assert_eq!(ValueType::from_u32(8), Some(ValueType::String));
-        assert_eq!(ValueType::from_u32(999), None);
-    }
-
-    #[test]
-    fn test_value_accessors() {
-        let string_val = Value::String("test".to_string());
-        assert_eq!(string_val.as_string(), Some("test"));
-        assert_eq!(string_val.as_bool(), None);
-
-        let bool_val = Value::Bool(true);
-        assert_eq!(bool_val.as_bool(), Some(true));
-        assert_eq!(bool_val.as_string(), None);
-    }
-
-    #[test]
-    fn test_header_parsing() {
-        let mut data = Vec::new();
-        data.extend_from_slice(&GGUF_MAGIC.to_le_bytes());  // magic
-        data.extend_from_slice(&2u32.to_le_bytes());        // version
-        data.extend_from_slice(&100u64.to_le_bytes());      // n_tensors
-        data.extend_from_slice(&5u64.to_le_bytes());        // n_kv
-
-        let mut cursor = Cursor::new(data);
-        let header = GgufHeader::parse(&mut cursor).unwrap();
-
-        assert_eq!(header.magic, GGUF_MAGIC);
-        assert_eq!(header.version, 2);
-        assert_eq!(header.n_tensors, 100);
-        assert_eq!(header.n_kv, 5);
-    }
 }

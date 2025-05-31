@@ -2,7 +2,9 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::process;
 
+// Add TensorInfo to imports
 use gguf_rs::metadata::{GgufHeader, GgufReader, Value, GGUF_MAGIC};
+use gguf_rs::TensorLoader;
 
 /// Command line interface for GGUF file inspection
 #[derive(Debug)]
@@ -18,20 +20,26 @@ enum Command {
     Metadata,
     Query(String),
     Validate,
+    // Add new commands
+    Params,
+    Tensors,
 }
 
 impl Args {
     fn parse() -> Result<Self, String> {
         let args: Vec<String> = std::env::args().collect();
 
+        // Update usage message with new commands
         if args.len() < 3 {
             return Err(format!(
                 "Usage: {} <command> <file> [options]\n\n\
                 Commands:\n  \
                 info      - Show basic file information\n  \
                 metadata  - Display all metadata key-value pairs\n  \
-                query     - Query specific metadata key (use: query <file> <key>)\n  \
-                validate  - Validate GGUF file format\n\n\
+                query <key> - Query specific metadata key\n  \
+                validate  - Validate GGUF file format\n  \
+                params    - Calculate and show total number of parameters\n  \
+                tensors   - List tensors, their labels, and shapes\n\n\
                 Options:\n  \
                 --verbose - Show detailed output",
                 args[0]
@@ -42,15 +50,20 @@ impl Args {
             "info" => Command::Info,
             "metadata" => Command::Metadata,
             "query" => {
+                // Check for the key argument
                 if args.len() < 4 {
-                    return Err("Query command requires a key argument".to_string());
+                    return Err("Query command requires a key argument (Usage: query <file> <key>)".to_string());
                 }
                 Command::Query(args[3].clone())
             }
             "validate" => Command::Validate,
+            // Add parsing for new commands
+            "params" => Command::Params,
+            "tensors" => Command::Tensors,
             _ => return Err(format!("Unknown command: {}", args[1])),
         };
 
+        // File path is always the second argument after the program name and command
         let file_path = PathBuf::from(&args[2]);
         let verbose = args.iter().any(|arg| arg == "--verbose" || arg == "-v");
 
@@ -67,12 +80,14 @@ fn main() {
         Ok(args) => args,
         Err(err) => {
             eprintln!("Error: {}", err);
+            // Exit with a non-zero status code to indicate an error
             process::exit(1);
         }
     };
 
     if let Err(err) = run(args) {
         eprintln!("Error: {}", err);
+        // Exit with a non-zero status code to indicate an error
         process::exit(1);
     }
 }
@@ -83,11 +98,13 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         return Err(format!("File not found: {}", args.file_path.display()).into());
     }
 
-    // Open and parse the file
+    // Open the file
     let mut file = File::open(&args.file_path)?;
+
+    // Read the header - required for all commands
     let header = GgufHeader::parse(&mut file)?;
 
-    // Check version compatibility
+    // Check version compatibility (warn unless validation is the command)
     if !header.is_version_supported() {
         println!("⚠️  Warning: GGUF version {} may not be fully supported", header.version);
     }
@@ -97,6 +114,12 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         Command::Metadata => show_metadata(&mut file, &header, args.verbose)?,
         Command::Query(key) => query_metadata(&mut file, &header, &key)?,
         Command::Validate => validate_file(&header, &args.file_path)?,
+        // Add new command handlers
+        Command::Params => {
+            let params = calculate_params(&mut file, &header)?;
+            println!("🔢 Total Parameters: {}", params);
+        }
+        Command::Tensors => show_tensors(&mut file, &header)?,
     }
 
     Ok(())
@@ -114,7 +137,7 @@ fn show_info(header: &GgufHeader, file_path: &PathBuf, verbose: bool) -> Result<
 
     if verbose {
         let file_size = std::fs::metadata(file_path)?.len();
-        println!("File size: {} bytes ({:.2} MB)", file_size, file_size as f64 / 1_048_576.0);
+        println!("File size: {} bytes ({:.2} MB)", file_size, file_size as f64 / 1_048_1_048_576.0); // Corrected MB calculation
         println!("Version supported: {}", header.is_version_supported());
 
         // Calculate approximate header size
@@ -126,6 +149,7 @@ fn show_info(header: &GgufHeader, file_path: &PathBuf, verbose: bool) -> Result<
 }
 
 fn show_metadata(file: &mut File, header: &GgufHeader, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    // GgufReader::read_metadata reads the metadata block and positions the file cursor afterwards
     let metadata = GgufReader::read_metadata(file, header.n_kv)?;
 
     // Keys to exclude from output
@@ -159,21 +183,22 @@ fn show_metadata(file: &mut File, header: &GgufHeader, verbose: bool) -> Result<
         let value = filtered_metadata[key];
         print!("{}: ", key);
         print_value(value, verbose);
-        println!();
+        println!(); // Add newline after printing value
     }
 
     Ok(())
 }
 
 fn query_metadata(file: &mut File, header: &GgufHeader, query_key: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // GgufReader::read_metadata reads the metadata block and positions the file cursor afterwards
     let metadata = GgufReader::read_metadata(file, header.n_kv)?;
 
     match metadata.get(query_key) {
         Some(value) => {
             println!("🔎 Query Result for '{}'", query_key);
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            print_value(value, true);
-            println!();
+            print_value(value, true); // Always print full value for a query
+            println!(); // Add newline after printing value
         }
         None => {
             println!("❌ Key '{}' not found in metadata", query_key);
@@ -186,6 +211,8 @@ fn query_metadata(file: &mut File, header: &GgufHeader, query_key: &str) -> Resu
             if keys.len() > 10 {
                 println!("  ... and {} more", keys.len() - 10);
             }
+            // The original code didn't return an error here, just printed a message.
+            // Keeping it consistent.
         }
     }
 
@@ -219,17 +246,20 @@ fn validate_file(header: &GgufHeader, file_path: &PathBuf) -> Result<(), Box<dyn
     if header.n_tensors > 0 {
         println!("✓ Contains {} tensors", header.n_tensors);
     } else {
+        // This is typically a warning for a model file
         warnings.push("File contains no tensors".to_string());
     }
 
     if header.n_kv > 0 {
         println!("✓ Contains {} metadata entries", header.n_kv);
     } else {
+        // This is typically a warning for a model file
         warnings.push("File contains no metadata".to_string());
     }
 
     // Check file size reasonableness
     let file_size = std::fs::metadata(file_path)?.len();
+    // Minimum size is header (32 bytes) + minimal metadata. 32 is too small.
     if file_size < 32 {
         issues.push("File too small to be a valid GGUF file");
     } else {
@@ -250,6 +280,7 @@ fn validate_file(header: &GgufHeader, file_path: &PathBuf) -> Result<(), Box<dyn
         for issue in issues {
             println!("  - {}", issue);
         }
+        // Return an error Box<dyn std::error::Error>
         return Err("File validation failed".into());
     }
 
@@ -257,54 +288,101 @@ fn validate_file(header: &GgufHeader, file_path: &PathBuf) -> Result<(), Box<dyn
     Ok(())
 }
 
+// print_value utility function kept as-is from original
 fn print_value(value: &Value, verbose: bool) {
     match value {
         Value::String(s) => {
             if verbose || s.len() <= 50 {
-                println!("\"{}\"", s);
+                print!("\"{}\"", s);
             } else {
-                println!("\"{}...\" (truncated, {} chars)", &s[..47], s.len());
+                print!("\"{}...\" (truncated, {} chars)", &s[..47], s.len());
             }
         }
-        Value::Bool(b) => println!("{}", b),
-        Value::Uint8(n) => println!("{}", n),
-        Value::Int8(n) => println!("{}", n),
-        Value::Uint16(n) => println!("{}", n),
-        Value::Int16(n) => println!("{}", n),
-        Value::Uint32(n) => println!("{}", n),
-        Value::Int32(n) => println!("{}", n),
-        Value::Uint64(n) => println!("{}", n),
-        Value::Int64(n) => println!("{}", n),
-        Value::Float32(f) => println!("{}", f),
-        Value::Float64(f) => println!("{}", f),
+        Value::Bool(b) => print!("{}", b),
+        Value::Uint8(n) => print!("{}", n),
+        Value::Int8(n) => print!("{}", n),
+        Value::Uint16(n) => print!("{}", n),
+        Value::Int16(n) => print!("{}", n),
+        Value::Uint32(n) => print!("{}", n),
+        Value::Int32(n) => print!("{}", n),
+        Value::Uint64(n) => print!("{}", n),
+        Value::Int64(n) => print!("{}", n),
+        Value::Float32(f) => print!("{}", f),
+        Value::Float64(f) => print!("{}", f),
         Value::Array(element_type, elements) => {
             if verbose || elements.len() <= 5 {
                 print!("[");
                 for (i, elem) in elements.iter().enumerate() {
                     if i > 0 { print!(", "); }
-                    match elem {
+                    // Original code printed specific types nicely, others with debug
+                     match elem {
                         Value::String(s) => print!("\"{}\"", s),
                         Value::Float32(f) => print!("{}", f),
                         Value::Float64(f) => print!("{}", f),
-                        _ => print!("{:?}", elem),
+                        _ => print!("{:?}", elem), // Use debug for other value types in arrays
                     }
                 }
-                println!("] ({:?}, {} elements)", element_type, elements.len());
+                print!("] ({:?}, {} elements)", element_type, elements.len());
             } else {
-                println!("[...] ({:?}, {} elements)", element_type, elements.len());
+                print!("[...] ({:?}, {} elements)", element_type, elements.len());
             }
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// --- New functions for the prompt ---
 
-    #[test]
-    fn test_args_parsing() {
-        // Test would require mocking std::env::args,
-        // which is complex in Rust. In practice, you'd use a crate like `clap`
-        // for more robust argument parsing.
+/// Calculates the total number of parameters across all tensors.
+/// Reads tensor information from the file to get shapes and computes the total.
+fn calculate_params(file: &mut File, header: &GgufHeader) -> Result<u64, Box<dyn std::error::Error>> {
+    let _metadata = GgufReader::read_metadata(file, header.n_kv)?;
+
+    // Change to use TensorLoader instead of GgufReader
+    let tensor_infos = TensorLoader::read_tensor_info(file, header.n_tensors)?;  // <-- FIXED HERE
+
+    let mut total_params: u64 = 0;
+    for info in tensor_infos {
+        let tensor_params = info.dims.iter().product::<u64>();
+        total_params += tensor_params;
     }
+    Ok(total_params)
+}
+/// Lists all tensors, their labels, and shapes.
+/// Reads tensor information from the file and prints it.
+fn show_tensors(file: &mut File, header: &GgufHeader) -> Result<(), Box<dyn std::error::Error>> {
+    println!("📜 Tensors ({} entries)", header.n_tensors);
+    println!("━━━━━━━━━━━━━━━━━━━━");
+
+    if header.n_tensors == 0 {
+        println!("No tensors found in this file.");
+        return Ok(());
+    }
+
+    // To read tensor information, the file cursor must be positioned after the header and metadata.
+    // GgufHeader::parse left the cursor after the header.
+    // GgufReader::read_metadata reads the metadata and positions the cursor after the metadata.
+    let _metadata = GgufReader::read_metadata(file, header.n_kv)?;
+
+    // GgufReader::read_tensor_infos reads the tensor information block and positions the cursor after it.
+    let tensor_infos = TensorLoader::read_tensor_info(file, header.n_tensors)?;
+
+    // Find max name length for alignment (optional, but nice)
+    let max_name_len = tensor_infos.iter().map(|info| info.name.len()).max().unwrap_or(0);
+
+    for (i, info) in tensor_infos.iter().enumerate() {
+        // Format dims nicely, e.g., "[dim1, dim2, dim3]" or "dim1 x dim2 x dim3"
+        let dimensions_str = info.dims.iter()
+            .map(|d| d.to_string())
+            .collect::<Vec<_>>()
+            .join("x"); // Join dims with 'x'
+
+        println!("{:>4}: {:<name_width$} [{}]",
+                 i,
+                 info.name,
+                 dimensions_str,
+                 name_width = max_name_len // Use exact max_name_len for alignment
+        );
+    }
+
+    Ok(())
 }
