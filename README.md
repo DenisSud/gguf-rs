@@ -10,7 +10,7 @@ __Core functionality__
 - [x] Parse GGUF file headers (magic number, version, tensor/kv counts)
 - [x] Extract metadata key-value pairs with various data types
 - [x] Basic tensor parsing
-- [ ] No model assembly or tensor processing for inference
+- [ ] No automatic model assembly or tensor processing for inference
 
 - [x] Basic file validation
 - [x] Simple CLI interface for file inspection
