@@ -80,18 +80,6 @@ impl GgufHeader {
     ///
     /// Returns `GgufError::Io` if an I/O error occurs during reading.
     /// Returns `GgufError::InvalidFormat` if the magic number doesn't match the GGUF signature.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::fs::File;
-    /// use gguf_rs::GgufHeader;
-    ///
-    /// let mut file = File::open("model.gguf")?;
-    /// let header = GgufHeader::parse(&mut file)?;
-    /// println!("GGUF version: {}", header.version);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
     pub fn parse<R: Read>(reader: &mut R) -> Result<Self> {
         let magic = read_u32_le(reader)?;
 
@@ -335,46 +323,38 @@ impl GgufReader {
     /// Returns `GgufError::Io` if an I/O error occurs during reading.
     /// Returns `GgufError::InvalidFormat` if the data is malformed.
     /// Returns `GgufError::Unsupported` if an unknown value type is encountered.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::fs::File;
-    /// use gguf_rs::{GgufHeader, GgufReader};
-    ///
-    /// let mut file = File::open("model.gguf")?;
-    /// let header = GgufHeader::parse(&mut file)?;
-    /// let metadata = GgufReader::read_metadata(&mut file, header.n_kv)?;
-    ///
-    /// if let Some(model_name) = metadata.get("general.name") {
-    ///     if let Some(name_str) = model_name.as_string() {
-    ///         println!("Model name: {}", name_str);
-    ///     }
-    /// }
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
     pub fn read_metadata<R: Read>(reader: &mut R, n_kv: u64) -> Result<HashMap<String, Value>> {
         let mut metadata_map = HashMap::with_capacity(n_kv as usize);
 
         for kv_index in 0..n_kv {
             // Read key
-            let key_len = read_u64_le(reader)
-                .map_err(|e| GgufError::InvalidFormat(format!("Error reading key length for KV pair {}: {}", kv_index, e)))?;
+            let key_len = read_u64_le(reader).map_err(|e| {
+                GgufError::InvalidFormat(format!(
+                    "Error reading key length for KV pair {}: {}",
+                    kv_index, e
+                ))
+            })?;
 
             let mut key_bytes = vec![0u8; key_len as usize];
             reader.read_exact(&mut key_bytes)?;
             let key = String::from_utf8(key_bytes)?;
 
             // Read value type
-            let value_type_id = read_u32_le(reader)
-                .map_err(|e| GgufError::InvalidFormat(format!("Error reading value type for KV pair {}: {}", kv_index, e)))?;
+            let value_type_id = read_u32_le(reader).map_err(|e| {
+                GgufError::InvalidFormat(format!(
+                    "Error reading value type for KV pair {}: {}",
+                    kv_index, e
+                ))
+            })?;
 
-            let value_type = ValueType::from_u32(value_type_id)
-                .ok_or_else(|| GgufError::Unsupported(format!("Unknown GGUF value type ID: {}", value_type_id)))?;
+            let value_type = ValueType::from_u32(value_type_id).ok_or_else(|| {
+                GgufError::Unsupported(format!("Unknown GGUF value type ID: {}", value_type_id))
+            })?;
 
             // Read value
-            let value = Self::read_value(reader, value_type)
-                .map_err(|e| GgufError::InvalidFormat(format!("Error reading value for key '{}': {}", key, e)))?;
+            let value = Self::read_value(reader, value_type).map_err(|e| {
+                GgufError::InvalidFormat(format!("Error reading value for key '{}': {}", key, e))
+            })?;
 
             metadata_map.insert(key, value);
         }
@@ -392,7 +372,10 @@ impl GgufReader {
             ValueType::Uint32 => Ok(Value::Uint32(read_u32_le(reader)?)),
             ValueType::Int32 => Ok(Value::Int32(read_u32_le(reader)? as i32)),
             ValueType::Float32 => Ok(Value::Float32(f32::from_le_bytes([
-                read_u8(reader)?, read_u8(reader)?, read_u8(reader)?, read_u8(reader)?
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
             ]))),
             ValueType::Bool => Ok(Value::Bool(read_u8(reader)? != 0)),
             ValueType::String => {
@@ -404,8 +387,12 @@ impl GgufReader {
             }
             ValueType::Array => {
                 let element_type_id = read_u32_le(reader)?;
-                let element_type = ValueType::from_u32(element_type_id)
-                    .ok_or_else(|| GgufError::Unsupported(format!("Unknown array element type ID: {}", element_type_id)))?;
+                let element_type = ValueType::from_u32(element_type_id).ok_or_else(|| {
+                    GgufError::Unsupported(format!(
+                        "Unknown array element type ID: {}",
+                        element_type_id
+                    ))
+                })?;
 
                 let count = read_u64_le(reader)? as usize;
                 let mut elements = Vec::with_capacity(count);
@@ -419,8 +406,14 @@ impl GgufReader {
             ValueType::Uint64 => Ok(Value::Uint64(read_u64_le(reader)?)),
             ValueType::Int64 => Ok(Value::Int64(read_u64_le(reader)? as i64)),
             ValueType::Float64 => Ok(Value::Float64(f64::from_le_bytes([
-                read_u8(reader)?, read_u8(reader)?, read_u8(reader)?, read_u8(reader)?,
-                read_u8(reader)?, read_u8(reader)?, read_u8(reader)?, read_u8(reader)?
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
+                read_u8(reader)?,
             ]))),
         }
     }

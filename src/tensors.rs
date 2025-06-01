@@ -53,7 +53,13 @@ impl TensorInfo {
     pub fn is_supported(&self) -> bool {
         matches!(
             self.tensor_type,
-            TensorType::F32 | TensorType::F16 | TensorType::I32 | TensorType::I16 | TensorType::I8 | TensorType::F64 | TensorType::I64
+            TensorType::F32
+                | TensorType::F16
+                | TensorType::I32
+                | TensorType::I16
+                | TensorType::I8
+                | TensorType::F64
+                | TensorType::I64
         )
     }
 }
@@ -256,10 +262,7 @@ impl TensorLoader {
                     tensors.insert(tensor_info.name.clone(), tensor);
                 }
                 Err(e) => {
-                    eprintln!(
-                        "⚠️  Failed to load tensor '{}': {}",
-                        tensor_info.name, e
-                    );
+                    eprintln!("⚠️  Failed to load tensor '{}': {}", tensor_info.name, e);
                     // Continue loading other tensors instead of failing completely
                 }
             }
@@ -291,22 +294,26 @@ fn f16_to_f32(f16_bits: u16) -> f32 {
             return if sign == 1 { -0.0 } else { 0.0 };
         } else {
             // Subnormal number
-            let mut value = (mantissa as f32) / 1024.0;  // 2^10
-            value *= 2f32.powi(-14);  // 2^(1-15)
+            let mut value = (mantissa as f32) / 1024.0; // 2^10
+            value *= 2f32.powi(-14); // 2^(1-15)
             return if sign == 1 { -value } else { value };
         }
     } else if exponent == 31 {
         // Infinity or NaN
         if mantissa == 0 {
-            return if sign == 1 { f32::NEG_INFINITY } else { f32::INFINITY };
+            return if sign == 1 {
+                f32::NEG_INFINITY
+            } else {
+                f32::INFINITY
+            };
         } else {
             return f32::NAN;
         }
     }
 
     // Normal number
-    let f32_exponent = (exponent as i32) - 15 + 127;  // Adjust bias from 15 to 127
-    let f32_mantissa = (mantissa as u32) << 13;  // Shift mantissa to f32 position
+    let f32_exponent = (exponent as i32) - 15 + 127; // Adjust bias from 15 to 127
+    let f32_mantissa = (mantissa as u32) << 13; // Shift mantissa to f32 position
 
     // Construct f32 bits
     let f32_bits = ((sign as u32) << 31) | ((f32_exponent as u32) << 23) | f32_mantissa;

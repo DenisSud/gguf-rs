@@ -9,7 +9,7 @@ keywords = ["gguf", "ggml", "parser", "machine-learning"]
 categories = ["parsing", "science"]
 
 [dependencies]
-axum = "0.7" # Use a recent version
+tempfile = "3.10" # Add for temporary file handling in tests
 tokio = { version = "1", features = [
     "full",
 ] } # Needed for the async runtime and TcpListener
