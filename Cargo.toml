@@ -1,5 +1,5 @@
 [package]
-name = "gguf-models"
+name = "gguf-llms"
 version = "0.0.1"
 edition = "2024"
 
