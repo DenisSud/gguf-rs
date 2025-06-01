@@ -91,7 +91,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gguf-models"
+name = "gguf-llms"
 version = "0.0.1"
 dependencies = [
  "byteorder",
