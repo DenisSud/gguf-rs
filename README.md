@@ -1,6 +1,6 @@
-# gguf-interface
+# gguf-llms
 
-[![crates.io](https://img.shields.io/crates/v/gguf-interface)](https://crates.io/crates/gguf-interface)
+[![crates.io](https://img.shields.io/crates/v/gguf-llms)](https://crates.io/crates/gguf-llms)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A comprehensive Rust library for parsing, analyzing, and working with GGUF files. The crate provides a type-safe interface to extract model configuration, metadata, and tensor data from GGUF format files used in LLMs.
@@ -28,12 +28,12 @@ Current implementation supports:
 Add to your `Cargo.toml`:
 ```toml
 [dependencies]
-gguf-interface = "0.1"
+gguf-llms = "0.0.1"
 ```
 
 Basic usage example:
 ```rust
-use gguf_interface::*;
+use gguf_llms::*;
 use std::fs::File;
 
 fn main() -> Result<(), GgufError> {
@@ -69,7 +69,7 @@ fn main() -> Result<(), GgufError> {
 
 ### Project Structure
 ```terminal
-gguf-interface/
+gguf-llms/
 ├── src/
 │   ├── config.rs       // Model configuration extraction
 │   ├── metadata.rs     // GGUF format parsing and types
@@ -86,7 +86,7 @@ gguf-interface/
    - Error handling for malformed files
 
 2. **Model Configuration**
-```rs gguf-interface/src/config.rs#L13-27
+```rs gguf-llms/src/config.rs#L13-27
 pub fn extract_model_config(metadata: &HashMap<String, Value>) -> Result<ModelConfig> {
     let architecture = /* ... */;
     let arch_prefix = &architecture;
@@ -100,7 +100,7 @@ pub fn extract_model_config(metadata: &HashMap<String, Value>) -> Result<ModelCo
    - Reads tensor information and binary data
    - Automatic FP16 → FP32 conversion
    - Memory-efficient loading
-```rs gguf-interface/src/tensors.rs#L98-112
+```rs gguf-llms/src/tensors.rs#L98-112
 pub fn load_tensor<R: Read + Seek>(
     reader: &mut R,
     tensor_info: &TensorInfo,
@@ -114,7 +114,7 @@ pub fn load_tensor<R: Read + Seek>(
 ```
 
 4. **Model Organization**
-```rs gguf-interface/src/model.rs#L197-233
+```rs gguf-llms/src/model.rs#L197-233
 fn build_transformer_block(&mut self, layer_idx: usize) -> Result<TransformerBlock> {
     let prefix = format!("blk.{}", layer_idx);
     let attention = AttentionLayer {
