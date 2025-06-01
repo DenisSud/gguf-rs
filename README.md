@@ -153,6 +153,3 @@ Contributions are welcome! Please open issues or pull requests for:
 
 MIT License - see [LICENSE](LICENSE) for details.
 
----
-
-This README provides a comprehensive overview of your crate that will be useful for potential users on crates.io. It includes installation instructions, a usage example, project structure details, and clear explanations of the core functionality.
