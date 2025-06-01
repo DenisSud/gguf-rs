@@ -2,6 +2,7 @@
 name = "gguf-rs"
 version = "0.1.0"
 edition = "2024"
+
 description = "A Rust library for parsing GGUF (GGML Universal Format) files"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/yourusername/gguf-rs"
